@@ -1,1 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>31' × 42' Blueprint 3D Architectural Model — Tamil Nadu Residence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        /* Floating 3D HTML Labels */
+        .room-label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(251, 191, 36, 0.55);
+            color: #ffffff;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.45);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+        .room-label .title {
+            font-weight: 700;
+            color: #fbbf24;
+            font-size: 12px;
+        }
+        .room-label .dims {
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+        .room-label .vastu {
+            color: #38bdf8;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .active-btn {
+            background: linear-gradient(135deg, #d97706, #b45309) !important;
+            border-color: #fbbf24 !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
 
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Floating Room Labels Container -->
+    <div id="labels-container"></div>
+
+    <!-- Top Header Bar -->
+    <header class="fixed top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 glass-panel px-4 py-2.5 rounded-xl shadow-2xl">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 font-bold text-lg">
+                3D
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm md:text-base font-bold text-white tracking-tight">31' × 42' Blueprint 3D Model — Tamil Nadu Residence</h1>
+                    <span class="hidden sm:inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Matched to Your Hand-Drawn Blueprint
+                    </span>
+                </div>
+                <p class="text-xs text-slate-300">Exact Blueprint Grid: 31'0" × 42'0" (1,302 Sq.Ft Plinth / ~1,500 Sq.Ft Super Built-Up) • 12 RCC Pillars • Scale: 1 Unit = 1 Foot</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btn-specs-modal" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition flex items-center gap-1.5">
+                <span>📋 Blueprint BOQ & Specs</span>
+            </button>
+            <button id="btn-export-obj" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40 transition flex items-center gap-1.5">
+                <span>⬇ Download 3D (.OBJ)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Left Control Panel: Views & Layer Toggles -->
+    <aside class="fixed top-20 left-3 z-20 w-64 max-h-[calc(100vh-140px)] overflow-y-auto glass-panel p-3.5 rounded-xl shadow-2xl space-y-4">
+        
+        <!-- Camera Presets -->
+        <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-2 flex items-center justify-between">
+                <span>1. Blueprint & 3D Views</span>
+                <span class="text-[10px] text-slate-400 font-normal">Orbit / Zoom</span>
+            </h2>
+            <div class="grid grid-cols-1 gap-1.5">
+                <button onclick="setCameraView('blueprint')" id="view-blueprint" class="cam-btn active-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 border border-slate-600/50 text-left transition flex items-center justify-between">
+                    <span>📐 Blueprint Top-Down 3D Cutaway</span>
+                    <span class="text-[10px] bg-black/30 px-1.5 py-0.5 rounded">31×42</span>
+                </button>
+                <button onclick="setCameraView('front')" id="view-front" class="cam-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 border border-slate-600/50 text-left transition">
+                    🏛️ Front Elevation (Verandah & Stairs)
+                </button>
+                <button onclick="setCameraView('corner')" id="view-corner" class="cam-btn px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 border border-slate-600/50 text-left transition">
+                    🏠 Isometric 3D Corner View
+                </button>
+            </div>
+        </div>
+
+        <!-- Interior Room Close-Ups -->
+        <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-sky-400 mb-2">
+                2. Blueprint Room Focus
+            </h2>
+            <div class="grid grid-cols-1 gap-1.5">
+                <button onclick="setCameraView('hall')" id="view-hall" class="cam-btn px-2.5 py-1.5 rounded-lg text-xs bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition flex justify-between">
+                    <span>🛋️ Living & Dining Hall</span>
+                    <span class="text-amber-300 font-mono text-[10px]">17'×16'</span>
+                </button>
+                <button onclick="setCameraView('bedrooms')" id="view-bedrooms" class="cam-btn px-2.5 py-1.5 rounded-lg text-xs bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition flex justify-between">
+                    <span>🛏️ 2 Bedrooms & 6' Bath Core</span>
+                    <span class="text-amber-300 font-mono text-[10px]">16'×11'</span>
+                </button>
+                <button onclick="setCameraView('kitchen')" id="view-kitchen" class="cam-btn px-2.5 py-1.5 rounded-lg text-xs bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition flex justify-between">
+                    <span>🍳 Kitchen & 6'×11' Pooja</span>
+                    <span class="text-amber-300 font-mono text-[10px]">10'×11'</span>
+                </button>
+                <button onclick="setCameraView('stairs')" id="view-stairs" class="cam-btn px-2.5 py-1.5 rounded-lg text-xs bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-left transition flex justify-between">
+                    <span>🪜 Dog-Legged Stair & Porch</span>
+                    <span class="text-amber-300 font-mono text-[10px]">9' Bay</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Structural & Layer Toggles -->
+        <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">
+                3. Material & Structural Modes
+            </h2>
+            <div class="space-y-1.5">
+                <button id="toggle-roof" onclick="toggleRoof()" class="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-between transition">
+                    <span>🏗️ RCC Roof & Parapet</span>
+                    <span id="roof-status" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">HIDDEN</span>
+                </button>
+
+                <button id="toggle-xray" onclick="toggleBrickStructureMode()" class="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-between transition">
+                    <span>🧱 Red Brick & 12 RCC Pillars</span>
+                    <span id="xray-status" class="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]">FINISHED</span>
+                </button>
+
+                <button id="toggle-grid" onclick="toggleBlueprintGrid()" class="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-between transition">
+                    <span>📏 2D Blueprint Dimension Grid</span>
+                    <span id="grid-status" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">ON</span>
+                </button>
+
+                <button id="toggle-labels" onclick="toggleLabels()" class="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-between transition">
+                    <span>🏷️ Blueprint Room Badges</span>
+                    <span id="labels-status" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">ON</span>
+                </button>
+
+                <button id="toggle-furniture" onclick="toggleFurniture()" class="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-between transition">
+                    <span>🛋️ Interior Furniture</span>
+                    <span id="furniture-status" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">ON</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Asian Paints Exterior Theme -->
+        <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-rose-400 mb-2">
+                4. Asian Paints Exterior Picker
+            </h2>
+            <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="setPaintTheme('warm')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-500/50 flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full bg-[#fdf6e2] border border-amber-600 shrink-0"></span>
+                    <span class="text-[10px] text-slate-200">Warm Cream</span>
+                </button>
+                <button onclick="setPaintTheme('terracotta')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full bg-[#c2410c] border border-white/20 shrink-0"></span>
+                    <span class="text-[10px] text-slate-200">Terracotta</span>
+                </button>
+                <button onclick="setPaintTheme('sage')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full bg-[#d9f99d] border border-emerald-700 shrink-0"></span>
+                    <span class="text-[10px] text-slate-200">Pastel Sage</span>
+                </button>
+                <button onclick="setPaintTheme('white')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full bg-[#f8fafc] border border-slate-500 shrink-0"></span>
+                    <span class="text-[10px] text-slate-200">Classic White</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Blueprint Column Legend -->
+        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-700/80 text-[11px] space-y-1">
+            <div class="font-bold text-amber-300 flex items-center justify-between">
+                <span>📐 Your 31' × 42' Grid</span>
+                <span class="text-[10px] text-emerald-400">12 Pillars</span>
+            </div>
+            <div class="text-[10px] text-slate-300 space-y-0.5">
+                <div>• <strong class="text-white">Left Bay (16'):</strong> 16×11 + 6' + 16×11</div>
+                <div>• <strong class="text-white">Center Bay (17'):</strong> 17×16 Hall + 6' + 10×11</div>
+                <div>• <strong class="text-white">Right Bay (9'):</strong> Verandah + Stairs</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Bottom Status Banner -->
+    <footer class="fixed bottom-3 left-3 right-3 z-20 glass-panel px-4 py-2 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">3D Controls</span>
+            <span class="text-slate-300 hidden md:inline">Left-Click + Drag: Rotate 360° • Right-Click + Drag: Pan • Scroll: Zoom</span>
+        </div>
+        <div class="text-amber-300 font-medium text-[11px]">
+            ✅ Built strictly from your 31' × 42' blueprint sketch (12 RCC Columns + Vengai Main Door + Supreme Pipes + Asian Paints)
+        </div>
+    </footer>
+
+    <!-- Modal for Blueprint Room Schedule & Material Brands -->
+    <div id="specs-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full rounded-2xl p-6 border border-amber-500/30 shadow-2xl max-h-[85vh] overflow-y-auto space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <div>
+                    <h3 class="text-lg font-bold text-amber-400">Your 31' × 42' Blueprint — Room Schedule & Materials</h3>
+                    <p class="text-xs text-slate-300">Exact 3-Bay Grid from Your Uploaded Sketch (1,302 Sq.Ft Plinth / ~1,500 Sq.Ft Super Built-Up)</p>
+                </div>
+                <button id="close-specs-modal" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">✕ Close</button>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 text-xs">
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 space-y-1.5">
+                    <h4 class="font-bold text-emerald-400 uppercase tracking-wider text-[11px]">Confirmed Material Brands</h4>
+                    <p><strong class="text-white">• 12 RCC Pillars:</strong> 16mm & 12mm Meenakshi TMT Steel Bars</p>
+                    <p><strong class="text-white">• Cement:</strong> UltraTech / Ramco (OPC 53 & PPC)</p>
+                    <p><strong class="text-white">• Walls:</strong> Red Clay Chamber Bricks (9" Outer & 4.5" Inner)</p>
+                    <p><strong class="text-white">• Main Entrance Door:</strong> Seasoned Vengai Wood (Verandah to 17×16 Hall)</p>
+                    <p><strong class="text-white">• Windows:</strong> White uPVC Sliding Windows + 5mm Toughened Glass</p>
+                    <p><strong class="text-white">• Flooring:</strong> 4×2 ft Vitrified Tiles + Anti-skid Bath Tiles</p>
+                    <p><strong class="text-white">• Plumbing:</strong> Supreme uPVC, CPVC & SWR Concealed Piping</p>
+                    <p><strong class="text-white">• Painting:</strong> Asian Paints TruCare Putty, Royale & Apex Exterior</p>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 space-y-1.5">
+                    <h4 class="font-bold text-sky-400 uppercase tracking-wider text-[11px]">Exact Blueprint Room Dimensions</h4>
+                    <p><strong class="text-white">• Top-Left Master Bedroom 1:</strong> 16'0" × 11'0" (176 sq.ft)</p>
+                    <p><strong class="text-white">• Middle-Left Bath 1 + Dress/Bath 2:</strong> Two 8'0" × 6'0" rooms (96 sq.ft)</p>
+                    <p><strong class="text-white">• Bottom-Left Bedroom 2:</strong> 16'0" × 11'0" (176 sq.ft)</p>
+                    <p><strong class="text-white">• Top-Center Main Living Hall:</strong> 17'0" × 16'0" (272 sq.ft)</p>
+                    <p><strong class="text-white">• Bottom-Center Pooja / Store:</strong> 6'0" × 11'0" (66 sq.ft)</p>
+                    <p><strong class="text-white">• Bottom-Center Kitchen:</strong> 10'0" × 11'0" (110 sq.ft)</p>
+                    <p><strong class="text-white">• Top-Right Entrance Verandah:</strong> 9'0" × 17'0" (153 sq.ft)</p>
+                    <p><strong class="text-white">• Bottom-Right Dog-Legged Stairs:</strong> 9'0" × 14'0" (126 sq.ft)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // EXACT BLUEPRINT COORDINATE SYSTEM (1 Three.js Unit = 1 Foot)
+        // Total Blueprint Footprint: 42 ft Length (X) × 31 ft Width (Z) = 1,302 Sq.Ft
+        // Centered at Origin (0,0,0) for smooth 360° camera orbiting:
+        //   X-axis (42 ft total): x = 0..42 maps to Three.js X = bX(x) = x - 21.0
+        //     - Left Bay (16 ft): x = 0 to 16
+        //     - Center Bay (17 ft): x = 16 to 33
+        //     - Right Bay (9 ft): x = 33 to 42 (Verandah & Dog-legged Staircase)
+        //   Z-axis (31 ft total): z = 0..31 maps to Three.js Z = bZ(z) = z - 15.5
+        //     - Left Bay Horizontal Rows: z = 0..11 (16×11), z = 11..17 (6' Bath/Dress), z = 17..31 (16×11)
+        //     - Center & Right Bays Horizontal Rows: z = 0..17 (17×16 Hall & Verandah), z = 17..31 (6×11 Pooja, 10×11 Kitchen, Staircase)
+        // ============================================================================
+
+        const bX = (x) => x - 21.0;
+        const bZ = (z) => z - 15.5;
+
+        let scene, camera, renderer, controls;
+        let roofGroup, exteriorWallsGroup, interiorWallsGroup, columnsGroup, furnitureGroup, doorsWindowsGroup, blueprintGridGroup;
+        let isRoofVisible = false; // Default hidden so user immediately sees exact blueprint match
+        let isBrickXrayMode = false;
+        let isGridVisible = true;
+        let areLabelsVisible = true;
+        let isFurnitureVisible = true;
+
+        const materials = {};
+        const labelElements = [];
+
+        // Exact labels matching the handwritten numbers on the user's uploaded sketch
+        const roomData = [
+            { name: "16 × 11", dims: "Master Bedroom 1 (176 sq.ft)", vastu: "Top-Left Bay", pos: new THREE.Vector3(bX(8.0), 5.5, bZ(5.5)) },
+            { name: "6' (8×6)", dims: "Attached Bath 1 (48 sq.ft)", vastu: "Mid-Left Outer", pos: new THREE.Vector3(bX(4.0), 5.5, bZ(14.0)) },
+            { name: "6' (8×6)", dims: "Dress / Bath 2 (48 sq.ft)", vastu: "Mid-Left Inner", pos: new THREE.Vector3(bX(12.0), 5.5, bZ(14.0)) },
+            { name: "16 × 11", dims: "Bedroom 2 (176 sq.ft)", vastu: "Bottom-Left Bay", pos: new THREE.Vector3(bX(8.0), 5.5, bZ(24.0)) },
+            { name: "17 × 16", dims: "Main Living & Dining Hall", vastu: "Top-Center (272 sq.ft)", pos: new THREE.Vector3(bX(24.5), 5.5, bZ(8.5)) },
+            { name: "6 (6×11)", dims: "Pooja / Common Utility", vastu: "Bottom-Center Left", pos: new THREE.Vector3(bX(19.0), 5.5, bZ(24.0)) },
+            { name: "10 × 11", dims: "Kitchen (Agni Corner)", vastu: "Bottom-Center Right", pos: new THREE.Vector3(bX(27.5), 5.5, bZ(24.0)) },
+            { name: "Verandah", dims: "9' × 17' Entrance Sit-Out", vastu: "Top-Right Bay", pos: new THREE.Vector3(bX(37.5), 5.5, bZ(8.5)) },
+            { name: "Staircase", dims: "9' × 14' Dog-Legged Stairs", vastu: "Bottom-Right Bay", pos: new THREE.Vector3(bX(37.5), 6.5, bZ(24.0)) },
+            { name: "← 31 ft →", dims: "Total Blueprint Width", vastu: "Left Outer Dimension", pos: new THREE.Vector3(bX(-2.8), 2.0, bZ(15.5)) },
+            { name: "← 42 ft →", dims: "Total Blueprint Length", vastu: "Bottom Outer Dimension", pos: new THREE.Vector3(bX(21.0), 2.0, bZ(33.8)) }
+        ];
+
+        function createBrickTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(0, 0, 256, 256);
+            const rows = 8, cols = 4;
+            const brickH = 256 / rows, brickW = 256 / cols;
+            for (let r = 0; r < rows; r++) {
+                const offset = (r % 2) * (brickW / 2);
+                for (let c = -1; c <= cols; c++) {
+                    const shade = 160 + Math.floor(Math.random() * 30);
+                    ctx.fillStyle = `rgb(${shade}, ${54 + Math.floor(Math.random()*14)}, 38)`;
+                    ctx.fillRect(c * brickW + offset + 2, r * brickH + 2, brickW - 4, brickH - 4);
+                }
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(5, 3);
+            return tex;
+        }
+
+        function createTileTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, 256, 256);
+            ctx.beginPath();
+            ctx.moveTo(24, 36);
+            ctx.lineTo(190, 210);
+            ctx.stroke();
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(14, 10);
+            return tex;
+        }
+
+        function createVengaiWoodTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#5c240e';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = '#3b1506';
+            for (let i = 0; i < 40; i++) {
+                ctx.fillRect(0, i * 6, 256, 2);
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function initMaterials() {
+            const brickTex = createBrickTexture();
+            const tileTex = createTileTexture();
+            const vengaiTex = createVengaiWoodTexture();
+
+            materials.exteriorPaint = new THREE.MeshStandardMaterial({ color: 0xfdf6e2, roughness: 0.6 });
+            materials.accentPaint = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.5 });
+            materials.interiorPaint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65 });
+            materials.redBrick = new THREE.MeshStandardMaterial({ map: brickTex, roughness: 0.85 });
+            materials.rccConcrete = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7 });
+            materials.rccPillarHighlight = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.3 });
+            materials.rebarSteel = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.8 });
+            materials.plinthStone = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+            materials.floorTile = new THREE.MeshStandardMaterial({ map: tileTex, roughness: 0.2, metalness: 0.05 });
+            materials.bathTile = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, roughness: 0.35 });
+            materials.verandahTile = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
+            materials.weatheringTile = new THREE.MeshStandardMaterial({ color: 0xb94629, roughness: 0.75 });
+            materials.vengaiWood = new THREE.MeshStandardMaterial({ map: vengaiTex, roughness: 0.35, metalness: 0.1 });
+            materials.internalDoor = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.45 });
+            materials.upvcFrame = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25 });
+            materials.tintedGlass = new THREE.MeshPhysicalMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.45,
+                roughness: 0.1,
+                metalness: 0.2
+            });
+            materials.blackGranite = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15, metalness: 0.25 });
+            materials.brass = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.2, metalness: 0.85 });
+        }
+
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.0035);
+
+            camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 1, 500);
+            // Start in Blueprint Top-Down Cutaway angle matching the paper sketch
+            camera.position.set(0, 66, 16);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02;
+            controls.minDistance = 12;
+            controls.maxDistance = 150;
+            controls.target.set(0, 2, 0);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.72);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfffbeb, 1.15);
+            sunLight.position.set(45, 80, 40);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            const d = 40;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            scene.add(sunLight);
+
+            const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x1e293b, 0.25);
+            scene.add(hemiLight);
+
+            initMaterials();
+            buildSurroundingGround();
+            buildBlueprintHouse();
+            buildBlueprintDimensionGrid();
+            createFloatingLabels();
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function createBox(w, h, d, mat, x, y, z, parent) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            if (parent) parent.add(mesh);
+            return mesh;
+        }
+
+        // Wall helper along X (from x1 to x2 at z)
+        function addWallX(x1, x2, z, thickness, height, yBottom, mat, group) {
+            const len = Math.abs(x2 - x1);
+            const cx = bX((x1 + x2) / 2);
+            const cz = bZ(z);
+            return createBox(len, height, thickness, mat, cx, yBottom + height / 2, cz, group);
+        }
+
+        // Wall helper along Z (from z1 to z2 at x)
+        function addWallZ(x, z1, z2, thickness, height, yBottom, mat, group) {
+            const len = Math.abs(z2 - z1);
+            const cx = bX(x);
+            const cz = bZ((z1 + z2) / 2);
+            return createBox(thickness, height, len, mat, cx, yBottom + height / 2, cz, group);
+        }
+
+        function buildSurroundingGround() {
+            const groundGroup = new THREE.Group();
+            // Outer Plot Ground
+            createBox(64, 0.4, 52, new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.95 }), 0, -0.2, 0, groundGroup);
+            // Soft grass border around the 42x31 house
+            createBox(54, 0.44, 43, new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.9 }), 0, -0.18, 0, groundGroup);
+            // Paved front approach on Right (+X side, X > 21)
+            createBox(10, 0.46, 34, new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 }), 25, -0.16, 0, groundGroup);
+            scene.add(groundGroup);
+        }
+
+        // ============================================================================
+        // BUILD THE 31' × 42' HOUSE EXACTLY MATCHING THE HAND-DRAWN SKETCH
+        // ============================================================================
+        function buildBlueprintHouse() {
+            exteriorWallsGroup = new THREE.Group();
+            interiorWallsGroup = new THREE.Group();
+            columnsGroup = new THREE.Group();
+            doorsWindowsGroup = new THREE.Group();
+            furnitureGroup = new THREE.Group();
+            roofGroup = new THREE.Group();
+
+            const plinthH = 1.5;
+            const wallH = 10.0;
+
+            // 1. Exact 42' × 31' Plinth Base
+            createBox(42.0, plinthH, 31.0, materials.plinthStone, 0, plinthH / 2, 0, scene);
+
+            // 2. Main Vitrified Floor Tile Layer (Left & Center Bays: X = 0..33, Z = 0..31)
+            createBox(33.0, 0.16, 31.0, materials.floorTile, bX(16.5), plinthH + 0.08, bZ(15.5), scene);
+            // Bathroom Core Anti-Skid Tile Floor (X = 0..16, Z = 11..17)
+            createBox(15.6, 0.18, 6.0, materials.bathTile, bX(8.0), plinthH + 0.09, bZ(14.0), scene);
+            // Right Bay Floor (Verandah & Staircase Base: X = 33..42, Z = 0..31)
+            createBox(9.0, 0.16, 31.0, materials.verandahTile, bX(37.5), plinthH + 0.08, bZ(15.5), scene);
+
+            // Front Verandah Entrance Steps on the Right Side (X = 42, Z = 5..12)
+            createBox(2.4, 0.5, 7.0, materials.blackGranite, bX(43.2), 0.25, bZ(8.5), scene);
+            createBox(1.2, 1.0, 7.0, materials.blackGranite, bX(42.6), 0.5, bZ(8.5), scene);
+
+            // 3. THE 12 RCC STRUCTURAL PILLARS (Exact dark squares on your blueprint)
+            //    4 Vertical Grid Lines: X = 0, X = 16, X = 33, X = 42
+            //    3 Horizontal Grid Intersections:
+            //      - Top Perimeter: Z = 0
+            //      - Middle Spine: Z = 17
+            //      - Bottom Perimeter: Z = 31
+            const pillarCoords = [
+                [0, 0],  [16, 0],  [33, 0],  [42, 0],
+                [0, 17], [16, 17], [33, 17], [42, 17],
+                [0, 31], [16, 31], [33, 31], [42, 31]
+            ];
+            pillarCoords.forEach(([px, pz], idx) => {
+                // Main RCC Column (9" × 12" / 0.95 × 0.95 ft visual block)
+                const colMesh = createBox(0.95, wallH + 0.25, 0.95, materials.rccConcrete, bX(px), plinthH + wallH / 2, bZ(pz), columnsGroup);
+                colMesh.userData.isPillar = true;
+
+                // Top dark square cap (matching the dark squares drawn on the blueprint)
+                createBox(1.05, 0.25, 1.05, materials.rccPillarHighlight, bX(px), plinthH + wallH + 0.15, bZ(pz), columnsGroup);
+
+                // Meenakshi TMT 16mm & 12mm Steel Rebar starter bars protruding at top (visible in Brick/RCC mode)
+                const offsets = [[-0.28, -0.28], [0.28, -0.28], [-0.28, 0.28], [0.28, 0.28]];
+                offsets.forEach(([ox, oz]) => {
+                    const barGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.8, 8);
+                    const bar = new THREE.Mesh(barGeo, materials.rebarSteel);
+                    bar.position.set(bX(px) + ox, plinthH + wallH + 0.9, bZ(pz) + oz);
+                    columnsGroup.add(bar);
+                });
+            });
+
+            // 4. EXTERIOR 9-INCH (0.75 ft) RED CLAY BRICK WALLS
+            const extT = 0.75;
+            // Left Outer Wall (X = 0, Z = 0 to 31) — labeled "31" on sketch
+            addWallZ(0, 0, 31, extT, wallH, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+            // Top Outer Wall (Z = 0, X = 0 to 33; and low parapet/arch on Verandah X = 33 to 42)
+            addWallX(0, 33, 0, extT, wallH, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+            addWallX(33, 42, 0, extT, 3.2, plinthH, materials.exteriorPaint, exteriorWallsGroup); // Verandah top dwarf wall
+            addWallX(33, 42, 0, extT, 1.8, plinthH + 8.2, materials.accentPaint, exteriorWallsGroup); // Verandah lintel beam
+            // Bottom Outer Wall (Z = 31, X = 0 to 42) — labeled "42" on sketch
+            addWallX(0, 42, 31, extT, wallH, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+            // Right Outer Wall around Staircase (X = 42, Z = 17 to 31)
+            addWallZ(42, 17, 31, extT, wallH, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+            // Right Verandah Front Open Arch Beam & Low Sit-Out Wall (X = 42, Z = 0 to 17)
+            addWallZ(42, 0, 5, extT, 3.2, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+            addWallZ(42, 12, 17, extT, 3.2, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+            addWallZ(42, 0, 17, extT, 1.8, plinthH + 8.2, materials.accentPaint, exteriorWallsGroup);
+            // Wall between 17×16 Hall and Right Verandah (X = 33, Z = 0 to 17)
+            addWallZ(33, 0, 17, extT, wallH, plinthH, materials.exteriorPaint, exteriorWallsGroup);
+
+            // 5. INTERIOR WALLS (Matching every partition line in your sketch)
+            const intT = 0.45;
+            // Vertical Spine 1 between Left Bay (16') and Center Bay (17') at X = 16, Z = 0 to 31
+            addWallZ(16, 0, 31, 0.6, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+            // Vertical Spine 2 between Kitchen (10×11) and Staircase at X = 33, Z = 17 to 31
+            addWallZ(33, 17, 31, 0.6, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+
+            // Left Bay Horizontal Partitions:
+            // Top-Left Bedroom (16×11) bottom wall at Z = 11 (X = 0 to 16)
+            addWallX(0, 16, 11, intT, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+            // Middle-Left 6 ft Bath/Dress bottom wall at Z = 17 (X = 0 to 16)
+            addWallX(0, 16, 17, intT, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+            // Vertical divider splitting the 16×6 zone into two 8×6 spaces at X = 8 (Z = 11 to 17)
+            addWallZ(8, 11, 17, intT, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+
+            // Center & Right Bay Horizontal Spine at Z = 17:
+            // Separates 17×16 Hall from 6×11 Pooja & 10×11 Kitchen (X = 16 to 33)
+            addWallX(16, 33, 17, 0.6, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+            // Separates Verandah from Dog-Legged Staircase (X = 33 to 42, Z = 17) with open doorway
+            addWallX(33, 36.5, 17, intT, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+
+            // Divider between 6×11 Space and 10×11 Kitchen at X = 22 (Z = 17 to 31)
+            addWallZ(22, 17, 31, intT, wallH, plinthH, materials.interiorPaint, interiorWallsGroup);
+
+            // 6. DOORS & SLIDING uPVC WINDOWS (Matching tick marks on your sketch)
+            // Main Vengai Entrance Door on Wall X = 33 (opening from Verandah into 17×16 Hall at Z = 8.5)
+            buildVengaiMainDoor(bX(33.0), plinthH, bZ(8.5));
+
+            // Internal Doors:
+            buildInternalDoor(bX(16.0), plinthH, bZ(8.5), true);   // 17×16 Hall into Top-Left 16×11 Bedroom 1
+            buildInternalDoor(bX(5.0), plinthH, bZ(11.0), false);  // Top-Left 16×11 Bed into Attached 8×6 Bath
+            buildInternalDoor(bX(12.0), plinthH, bZ(17.0), false); // Bottom-Left 16×11 Bed into 8×6 Dress/Bath
+            buildInternalDoor(bX(16.0), plinthH, bZ(20.0), true);  // Entry into Bottom-Left 16×11 Bedroom 2
+            buildInternalDoor(bX(19.0), plinthH, bZ(17.0), false); // 17×16 Hall into 6×11 Pooja/Store
+            buildInternalDoor(bX(26.0), plinthH, bZ(17.0), false); // 17×16 Hall into 10×11 Kitchen
+
+            // Sliding uPVC Windows (Placed at the double-tick window marks on your sketch):
+            // Left Wall (X = 0): Windows for Top-Left 16×11 Bed, 6' Bath Ventilator, Bottom-Left 16×11 Bed
+            buildSlidingWindow(bX(0), plinthH + 3.0, bZ(5.5), 0.95, 4.5, 5.0, true);
+            buildSlidingWindow(bX(0), plinthH + 5.5, bZ(14.0), 0.95, 2.0, 2.5, true);
+            buildSlidingWindow(bX(0), plinthH + 3.0, bZ(24.0), 0.95, 4.5, 5.0, true);
+
+            // Top Wall (Z = 0): Window for 17×16 Living Hall (X = 24.5) & Top-Left Bed (X = 8.0)
+            buildSlidingWindow(bX(8.0), plinthH + 3.0, bZ(0), 5.0, 4.5, 0.95, false);
+            buildSlidingWindow(bX(24.5), plinthH + 3.0, bZ(0), 6.0, 4.5, 0.95, false);
+
+            // Wall X = 33 (Verandah to 17×16 Hall): Large sliding window beside Vengai door (tick marks on sketch)
+            buildSlidingWindow(bX(33.0), plinthH + 3.0, bZ(3.8), 0.95, 4.5, 4.8, true);
+            buildSlidingWindow(bX(33.0), plinthH + 3.0, bZ(13.5), 0.95, 4.5, 4.2, true);
+
+            // Bottom Wall (Z = 31): Windows at tick marks for 6×11 room (X = 19) and 10×11 Kitchen (X = 27.5) & Bed 2 (X = 8)
+            buildSlidingWindow(bX(8.0), plinthH + 3.0, bZ(31.0), 5.0, 4.5, 0.95, false);
+            buildSlidingWindow(bX(19.0), plinthH + 3.5, bZ(31.0), 3.2, 4.0, 0.95, false);
+            buildSlidingWindow(bX(27.5), plinthH + 3.5, bZ(31.0), 4.8, 4.0, 0.95, false);
+
+            // 7. RIGHT-BOTTOM U-SHAPED / DOG-LEGGED STAIRCASE (X = 33 to 42, Z = 17 to 31)
+            buildDogLeggedStaircase(plinthH);
+
+            // 8. COMPLETE INTERIOR FURNITURE FOR ALL ROOMS
+            buildBlueprintFurniture(plinthH);
+
+            // 9. FLAT RCC ROOF SLAB & PARAPET (Toggled via Left UI Panel)
+            buildBlueprintRoof(plinthH + wallH);
+
+            scene.add(exteriorWallsGroup);
+            scene.add(interiorWallsGroup);
+            scene.add(columnsGroup);
+            scene.add(doorsWindowsGroup);
+            scene.add(furnitureGroup);
+            scene.add(roofGroup);
+
+            // Start with roof hidden so user immediately sees their exact blueprint layout in 3D
+            roofGroup.visible = isRoofVisible;
+        }
+
+        function buildVengaiMainDoor(x, yBase, z) {
+            const doorGroup = new THREE.Group();
+            createBox(0.95, 7.2, 4.0, materials.vengaiWood, x, yBase + 3.6, z, doorGroup);
+            createBox(1.05, 6.8, 3.4, materials.vengaiWood, x, yBase + 3.4, z, doorGroup);
+            createBox(1.15, 0.8, 0.15, materials.brass, x, yBase + 3.5, z - 1.1, doorGroup);
+            createBox(1.1, 0.15, 2.8, materials.brass, x, yBase + 5.5, z, doorGroup);
+            createBox(1.1, 0.15, 2.8, materials.brass, x, yBase + 1.8, z, doorGroup);
+            doorsWindowsGroup.add(doorGroup);
+        }
+
+        function buildInternalDoor(x, yBase, z, alongZ) {
+            const w = alongZ ? 0.75 : 3.0;
+            const d = alongZ ? 3.0 : 0.75;
+            createBox(w, 7.0, d, materials.internalDoor, x, yBase + 3.5, z, doorsWindowsGroup);
+        }
+
+        function buildSlidingWindow(x, y, z, w, h, d, isEastWest) {
+            const winGroup = new THREE.Group();
+            createBox(w, h, d, materials.upvcFrame, x, y + h / 2, z, winGroup);
+            const gw = isEastWest ? w + 0.15 : w - 0.5;
+            const gd = isEastWest ? d - 0.5 : d + 0.15;
+            createBox(gw, h - 0.5, gd, materials.tintedGlass, x, y + h / 2, z, winGroup);
+            const mw = isEastWest ? w + 0.2 : 0.2;
+            const md = isEastWest ? 0.2 : d + 0.2;
+            createBox(mw, h - 0.2, md, materials.upvcFrame, x, y + h / 2, z, winGroup);
+            const sw = isEastWest ? w + 1.4 : w + 0.8;
+            const sd = isEastWest ? d + 0.8 : d + 1.4;
+            createBox(sw, 0.3, sd, materials.accentPaint, x, y + h + 0.15, z, winGroup);
+            doorsWindowsGroup.add(winGroup);
+        }
+
+        // Build the exact 2-flight Dog-Legged Staircase drawn in the Bottom-Right corner (X = 33..42, Z = 17..31)
+        function buildDogLeggedStaircase(yBase) {
+            const stairGroup = new THREE.Group();
+            const numSteps = 9;
+            const stepDepth = 1.0;
+            const stepRise = 5.0 / numSteps;
+
+            // Flight 1 (Left half: X = 33.6 to 37.4, rising from Z = 18.5 down to Z = 27.5)
+            for (let i = 0; i < numSteps; i++) {
+                const h = stepRise * (i + 1);
+                const zPos = 19.0 + i * stepDepth;
+                createBox(3.8, h, stepDepth, materials.rccConcrete, bX(35.5), yBase + h / 2, bZ(zPos), stairGroup);
+                createBox(3.8, 0.12, stepDepth, materials.blackGranite, bX(35.5), yBase + h + 0.06, bZ(zPos), stairGroup);
+            }
+
+            // Mid-Landing at Bottom of Staircase Bay (X = 33.6 to 41.4, Z = 27.5 to 30.5, Height = 5.0 ft)
+            createBox(7.8, 0.6, 3.0, materials.rccConcrete, bX(37.5), yBase + 4.7, bZ(29.0), stairGroup);
+            createBox(7.8, 0.12, 3.0, materials.blackGranite, bX(37.5), yBase + 5.06, bZ(29.0), stairGroup);
+
+            // Flight 2 (Right half: X = 37.6 to 41.4, rising from Z = 27.0 back up to Z = 18.0 to reach 10 ft Roof)
+            for (let i = 0; i < numSteps; i++) {
+                const h = 5.0 + stepRise * (i + 1);
+                const zPos = 27.0 - i * stepDepth;
+                createBox(3.8, 0.6, stepDepth, materials.rccConcrete, bX(39.5), yBase + h - 0.3, bZ(zPos), stairGroup);
+                createBox(3.8, 0.12, stepDepth, materials.blackGranite, bX(39.5), yBase + h + 0.06, bZ(zPos), stairGroup);
+            }
+
+            // Central Stainless Steel & Glass Railing between the two flights (X = 37.5)
+            createBox(0.18, 3.2, 9.5, materials.tintedGlass, bX(37.5), yBase + 6.5, bZ(23.0), stairGroup);
+            doorsWindowsGroup.add(stairGroup);
+        }
+
+        function buildBlueprintFurniture(yBase) {
+            const sofaMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.55 });
+            const bed1Mat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 });
+            const bed2Mat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.6 });
+            const sheetMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 });
+            const woodMat = materials.vengaiWood;
+
+            // 1. Top-Left Bedroom 1 (16×11: X = 0..16, Z = 0..11)
+            createBox(6.5, 1.8, 6.0, woodMat, bX(4.2), yBase + 0.9, bZ(5.5), furnitureGroup);
+            createBox(6.0, 2.1, 5.4, sheetMat, bX(4.4), yBase + 1.05, bZ(5.5), furnitureGroup);
+            createBox(5.5, 2.2, 2.0, bed1Mat, bX(5.8), yBase + 1.1, bZ(5.5), furnitureGroup);
+            // Wardrobe along top wall
+            createBox(6.0, 7.0, 1.8, woodMat, bX(12.0), yBase + 3.5, bZ(1.3), furnitureGroup);
+
+            // 2. Middle-LeftTwo 8×6 Bathrooms/Dressing (X = 0..8 and X = 8..16, Z = 11..17)
+            // Left Bath 1 (X = 0..8): EWC Closet, Washbasin, Shower glass
+            createBox(1.6, 1.6, 2.2, sheetMat, bX(2.0), yBase + 0.8, bZ(15.2), furnitureGroup);
+            createBox(2.0, 2.6, 1.4, sheetMat, bX(6.2), yBase + 1.3, bZ(12.2), furnitureGroup);
+            // Right Dress / Bath 2 (X = 8..16): Dressing unit & Washbasin
+            createBox(1.8, 6.8, 4.2, woodMat, bX(9.4), yBase + 3.4, bZ(14.0), furnitureGroup);
+            createBox(1.6, 1.6, 2.0, sheetMat, bX(14.2), yBase + 0.8, bZ(12.5), furnitureGroup);
+
+            // 3. Bottom-Left Bedroom 2 (16×11: X = 0..16, Z = 17..31)
+            createBox(6.2, 1.8, 5.8, woodMat, bX(4.2), yBase + 0.9, bZ(24.5), furnitureGroup);
+            createBox(5.8, 2.1, 5.2, sheetMat, bX(4.4), yBase + 1.05, bZ(24.5), furnitureGroup);
+            createBox(5.2, 2.2, 2.0, bed2Mat, bX(5.6), yBase + 1.1, bZ(24.5), furnitureGroup);
+            // Wardrobe & Study Desk
+            createBox(5.5, 7.0, 1.8, woodMat, bX(12.5), yBase + 3.5, bZ(29.7), furnitureGroup);
+
+            // 4. Top-Center Main Living & Dining Hall (17×16: X = 16..33, Z = 0..17)
+            // L-Shaped Sofa Set
+            createBox(7.5, 1.5, 2.8, sofaMat, bX(23.5), yBase + 0.75, bZ(3.2), furnitureGroup);
+            createBox(2.8, 1.5, 6.0, sofaMat, bX(18.6), yBase + 0.75, bZ(6.2), furnitureGroup);
+            // Teak Coffee Table
+            createBox(4.0, 1.2, 2.4, woodMat, bX(23.5), yBase + 0.6, bZ(6.8), furnitureGroup);
+            // 4-Seater Dining Table in Hall (X = 25.5, Z = 13.0)
+            createBox(4.8, 2.5, 3.2, woodMat, bX(24.5), yBase + 1.25, bZ(13.2), furnitureGroup);
+
+            // 5. Bottom-Center Left Pooja / Store Room (6×11: X = 16..22, Z = 17..31)
+            createBox(3.2, 2.8, 1.8, woodMat, bX(19.0), yBase + 1.4, bZ(28.5), furnitureGroup);
+            const poojaLight = new THREE.PointLight(0xfbbf24, 1.1, 9);
+            poojaLight.position.set(bX(19.0), yBase + 4.0, bZ(27.5));
+            furnitureGroup.add(poojaLight);
+
+            // 6. Bottom-Center Right Kitchen (10×11: X = 22..33, Z = 17..31)
+            // L-Shaped Black Granite Counter along East (X=31.5) & South (Z=29.5) walls
+            createBox(9.2, 2.8, 2.2, materials.blackGranite, bX(27.5), yBase + 1.4, bZ(29.5), furnitureGroup);
+            createBox(2.2, 2.8, 8.5, materials.blackGranite, bX(31.5), yBase + 1.4, bZ(24.2), furnitureGroup);
+            // Stainless Steel Sink & Gas Stove Hob
+            createBox(2.2, 2.9, 1.6, new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 }), bX(25.5), yBase + 1.45, bZ(29.5), furnitureGroup);
+            createBox(1.6, 3.0, 2.4, new THREE.MeshStandardMaterial({ color: 0x1e293b }), bX(31.5), yBase + 1.5, bZ(23.5), furnitureGroup);
+
+            // 7. Right Verandah Sit-Out Bench (X = 33..42, Z = 0..17)
+            createBox(4.5, 1.6, 1.8, woodMat, bX(37.5), yBase + 0.8, bZ(1.8), furnitureGroup);
+        }
+
+        function buildBlueprintRoof(roofY) {
+            // Flat RCC Roof Slab with Staircase Headroom Opening on Bottom-Right
+            createBox(34.0, 0.7, 32.0, materials.rccConcrete, bX(16.5), roofY + 0.35, bZ(15.5), roofGroup);
+            createBox(9.5, 0.7, 17.5, materials.rccConcrete, bX(37.5), roofY + 0.35, bZ(8.5), roofGroup);
+            // Weathering Course Terracotta Tiles
+            createBox(32.5, 0.15, 30.5, materials.weatheringTile, bX(16.5), roofY + 0.75, bZ(15.5), roofGroup);
+
+            // Staircase Headroom Mumty Room (X = 33..42, Z = 17..31)
+            createBox(9.2, 7.5, 14.2, materials.exteriorPaint, bX(37.5), roofY + 3.75, bZ(24.0), roofGroup);
+            createBox(9.8, 0.6, 14.8, materials.accentPaint, bX(37.5), roofY + 7.6, bZ(24.0), roofGroup);
+
+            // 3.5 ft Parapet Walls around perimeter
+            const pH = 3.5;
+            const pY = roofY + 0.7 + pH / 2;
+            addWallZ(0, 0, 31, 0.6, pH, roofY + 0.7, materials.exteriorPaint, roofGroup);
+            addWallX(0, 42, 0, 0.6, pH, roofY + 0.7, materials.exteriorPaint, roofGroup);
+            addWallX(0, 33, 31, 0.6, pH, roofY + 0.7, materials.exteriorPaint, roofGroup);
+            addWallZ(42, 0, 17, 0.8, pH + 0.5, roofY + 0.7, materials.accentPaint, roofGroup);
+
+            // Supreme 1000L Overhead Water Tank above Bathroom Core (X = 8, Z = 14)
+            const tankGeo = new THREE.CylinderGeometry(2.1, 2.1, 4.2, 24);
+            const tankMesh = new THREE.Mesh(tankGeo, new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 }));
+            tankMesh.position.set(bX(8.0), roofY + 2.8, bZ(14.0));
+            roofGroup.add(tankMesh);
+        }
+
+        // ============================================================================
+        // 2D BLUEPRINT DIMENSION OVERLAY LINES (31 ft × 42 ft outer & bay lines)
+        // ============================================================================
+        function buildBlueprintDimensionGrid() {
+            blueprintGridGroup = new THREE.Group();
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
+
+            function addDimLine(x1, z1, x2, z2) {
+                const pts = [
+                    new THREE.Vector3(bX(x1), 1.65, bZ(z1)),
+                    new THREE.Vector3(bX(x2), 1.65, bZ(z2))
+                ];
+                const geo = new THREE.BufferGeometry().setFromPoints(pts);
+                blueprintGridGroup.add(new THREE.Line(geo, lineMat));
+            }
+
+            // Outer "31 ft" Left Dimension Line (at X = -2.2, Z = 0 to 31)
+            addDimLine(-2.2, 0, -2.2, 31);
+            addDimLine(-2.8, 0, -1.2, 0);
+            addDimLine(-2.8, 31, -1.2, 31);
+
+            // Outer "42 ft" Bottom Dimension Line (at Z = 33.2, X = 0 to 42)
+            addDimLine(0, 33.2, 42, 33.2);
+            addDimLine(0, 32.2, 0, 33.8);
+            addDimLine(16, 32.2, 16, 33.8);
+            addDimLine(22, 32.2, 22, 33.8);
+            addDimLine(33, 32.2, 33, 33.8);
+            addDimLine(42, 32.2, 42, 33.8);
+
+            scene.add(blueprintGridGroup);
+        }
+
+        function createFloatingLabels() {
+            const container = document.getElementById('labels-container');
+            container.innerHTML = '';
+            labelElements.length = 0;
+            roomData.forEach(room => {
+                const div = document.createElement('div');
+                div.className = 'room-label';
+                div.innerHTML = `
+                    <div class="title">${room.name}</div>
+                    <div class="dims">${room.dims}</div>
+                    <div class="vastu">${room.vastu}</div>
+                `;
+                container.appendChild(div);
+                labelElements.push({ element: div, position: room.pos });
+            });
+        }
+
+        function updateLabels() {
+            if (!areLabelsVisible) return;
+            labelElements.forEach(item => {
+                const tempV = item.position.clone();
+                tempV.project(camera);
+                if (tempV.z > 1) {
+                    item.element.style.opacity = '0';
+                    return;
+                }
+                const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+                item.element.style.left = `${x}px`;
+                item.element.style.top = `${y}px`;
+                item.element.style.opacity = '1';
+            });
+        }
+
+        // ============================================================================
+        // INTERACTIVE CAMERA VIEWS & MATERIAL MODES
+        // ============================================================================
+        let targetCamPos = null;
+        let targetLookAt = null;
+
+        function setCameraView(viewName) {
+            document.querySelectorAll('.cam-btn').forEach(btn => btn.classList.remove('active-btn'));
+            const activeBtn = document.getElementById(`view-${viewName}`);
+            if (activeBtn) activeBtn.classList.add('active-btn');
+
+            switch (viewName) {
+                case 'blueprint': // Exact orientation matching the uploaded paper blueprint
+                    setRoofState(false);
+                    targetCamPos = new THREE.Vector3(0, 66, 14);
+                    targetLookAt = new THREE.Vector3(0, 2, 0);
+                    break;
+                case 'front': // Right Bay Front Elevation (Verandah & Staircase)
+                    setRoofState(true);
+                    targetCamPos = new THREE.Vector3(62, 16, 8);
+                    targetLookAt = new THREE.Vector3(0, 6, 0);
+                    break;
+                case 'corner': // Isometric 3D Corner Perspective
+                    setRoofState(false);
+                    targetCamPos = new THREE.Vector3(46, 38, 44);
+                    targetLookAt = new THREE.Vector3(0, 4, 0);
+                    break;
+                case 'hall': // 17x16 Living Hall & Vengai Main Door
+                    setRoofState(false);
+                    targetCamPos = new THREE.Vector3(18, 26, -24);
+                    targetLookAt = new THREE.Vector3(bX(24.5), 4, bZ(8.5));
+                    break;
+                case 'bedrooms': // Left Bay: Two 16x11 Bedrooms & 6' Bath Core
+                    setRoofState(false);
+                    targetCamPos = new THREE.Vector3(-34, 30, 18);
+                    targetLookAt = new THREE.Vector3(bX(8.0), 4, bZ(15.5));
+                    break;
+                case 'kitchen': // Bottom Center: 10x11 Kitchen & 6x11 Pooja
+                    setRoofState(false);
+                    targetCamPos = new THREE.Vector3(8, 25, 36);
+                    targetLookAt = new THREE.Vector3(bX(24.5), 4, bZ(24.0));
+                    break;
+                case 'stairs': // Right Bay: Dog-Legged Staircase & Entrance Verandah
+                    setRoofState(false);
+                    targetCamPos = new THREE.Vector3(42, 26, 26);
+                    targetLookAt = new THREE.Vector3(bX(37.5), 5, bZ(18.0));
+                    break;
+            }
+        }
+
+        function setRoofState(visible) {
+            isRoofVisible = visible;
+            roofGroup.visible = isRoofVisible;
+            const badge = document.getElementById('roof-status');
+            badge.textContent = isRoofVisible ? 'ON' : 'HIDDEN';
+            badge.className = isRoofVisible
+                ? 'px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]'
+                : 'px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]';
+        }
+
+        function toggleRoof() {
+            setRoofState(!isRoofVisible);
+        }
+
+        function toggleBrickStructureMode() {
+            isBrickXrayMode = !isBrickXrayMode;
+            const wallMat = isBrickXrayMode ? materials.redBrick : materials.exteriorPaint;
+            const innerMat = isBrickXrayMode ? materials.redBrick : materials.interiorPaint;
+
+            exteriorWallsGroup.children.forEach(mesh => { mesh.material = wallMat; });
+            interiorWallsGroup.children.forEach(mesh => { mesh.material = innerMat; });
+
+            // Highlight the 12 RCC Pillars in bright structural slate/steel when in Brick mode
+            columnsGroup.children.forEach(mesh => {
+                if (mesh.userData.isPillar) {
+                    mesh.material = isBrickXrayMode ? materials.rccPillarHighlight : materials.rccConcrete;
+                }
+            });
+
+            const badge = document.getElementById('xray-status');
+            badge.textContent = isBrickXrayMode ? 'BRICK + 12 PILLARS' : 'FINISHED';
+            badge.className = isBrickXrayMode
+                ? 'px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]'
+                : 'px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]';
+        }
+
+        function toggleBlueprintGrid() {
+            isGridVisible = !isGridVisible;
+            blueprintGridGroup.visible = isGridVisible;
+            const badge = document.getElementById('grid-status');
+            badge.textContent = isGridVisible ? 'ON' : 'OFF';
+        }
+
+        function toggleLabels() {
+            areLabelsVisible = !areLabelsVisible;
+            document.getElementById('labels-container').style.display = areLabelsVisible ? 'block' : 'none';
+            const badge = document.getElementById('labels-status');
+            badge.textContent = areLabelsVisible ? 'ON' : 'OFF';
+        }
+
+        function toggleFurniture() {
+            isFurnitureVisible = !isFurnitureVisible;
+            furnitureGroup.visible = isFurnitureVisible;
+            const badge = document.getElementById('furniture-status');
+            badge.textContent = isFurnitureVisible ? 'ON' : 'OFF';
+        }
+
+        function setPaintTheme(theme) {
+            if (isBrickXrayMode) toggleBrickStructureMode();
+            if (theme === 'warm') {
+                materials.exteriorPaint.color.setHex(0xfdf6e2);
+                materials.accentPaint.color.setHex(0xb45309);
+            } else if (theme === 'terracotta') {
+                materials.exteriorPaint.color.setHex(0xffedd5);
+                materials.accentPaint.color.setHex(0xc2410c);
+            } else if (theme === 'sage') {
+                materials.exteriorPaint.color.setHex(0xecfccb);
+                materials.accentPaint.color.setHex(0x15803d);
+            } else if (theme === 'white') {
+                materials.exteriorPaint.color.setHex(0xf8fafc);
+                materials.accentPaint.color.setHex(0x334155);
+            }
+        }
+
+        function exportHouseToOBJ() {
+            let output = '# 31x42 Ft Tamil Nadu Blueprint 3D House Model\n';
+            output += '# Scale: 1 Unit = 1 Foot\n';
+            let vertexOffset = 1;
+
+            scene.traverse(child => {
+                if (child.isMesh && child.visible) {
+                    const geometry = child.geometry.clone();
+                    geometry.applyMatrix4(child.matrixWorld);
+                    const pos = geometry.attributes.position;
+                    const index = geometry.index;
+
+                    output += `o Mesh_${child.id}\n`;
+                    for (let i = 0; i < pos.count; i++) {
+                        output += `v ${pos.getX(i).toFixed(3)} ${pos.getY(i).toFixed(3)} ${pos.getZ(i).toFixed(3)}\n`;
+                    }
+                    if (index) {
+                        for (let i = 0; i < index.count; i += 3) {
+                            const a = index.getX(i) + vertexOffset;
+                            const b = index.getX(i + 1) + vertexOffset;
+                            const c = index.getX(i + 2) + vertexOffset;
+                            output += `f ${a} ${b} ${c}\n`;
+                        }
+                    }
+                    vertexOffset += pos.count;
+                }
+            });
+
+            const blob = new Blob([output], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'TamilNadu_31x42_Blueprint_House.obj';
+            link.click();
+        }
+
+        document.getElementById('btn-export-obj').addEventListener('click', exportHouseToOBJ);
+        document.getElementById('btn-specs-modal').addEventListener('click', () => {
+            const modal = document.getElementById('specs-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+        document.getElementById('close-specs-modal').addEventListener('click', () => {
+            const modal = document.getElementById('specs-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (targetCamPos && targetLookAt) {
+                camera.position.lerp(targetCamPos, 0.08);
+                controls.target.lerp(targetLookAt, 0.08);
+                if (camera.position.distanceTo(targetCamPos) < 0.4) {
+                    targetCamPos = null;
+                    targetLookAt = null;
+                }
+            }
+            controls.update();
+            updateLabels();
+            renderer.render(scene, camera);
+        }
+
+        window.onload = initScene;
+    </script>
+</body>
+</html>
